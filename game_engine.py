@@ -14,7 +14,6 @@ class PlayerCharacter:
     def __str__(self):
         return f"{self.name} ({self.role})"
 
-
 # -----------------------------
 # LLM Client for API Integration via Ollama
 # -----------------------------
@@ -45,7 +44,6 @@ class LLMClient:
             else:
                 extracted = raw_response
         return extracted
-
 
 # -----------------------------
 # Narrative Manager
@@ -118,7 +116,6 @@ class NarrativeManager:
         except Exception:
             return []
 
-
 # -----------------------------
 # Choice Manager
 # -----------------------------
@@ -178,7 +175,7 @@ class NPCInteractionModule:
                     filtered.append(npc)
             return filtered if filtered else active
 
-        # Fallback: use LLM query.
+        # Fallback: use LLM.
         prompt = (
             "Based on the context below, decide which NPCs from the following list should interact with the player. "
             "Return a valid JSON array of NPC objects (each with 'name' and 'visual_description').\n\n"
@@ -218,7 +215,6 @@ class NPCInteractionModule:
             f"{motive_text}"
             "Example: {\"name\": \"Elara the Woodland Spirit\", \"action\": \"smiles mysteriously\", \"speech\": \"There are secrets I must keep...\"}"
         )
-        
         llm_response = self.llm_client.call_llm(prompt)
         try:
             npc_reply = json.loads(llm_response)
@@ -303,6 +299,7 @@ class GameEngine:
         except ValueError:
             print("Invalid input. Defaulting to the first NPC.")
             chosen_npc = active_npcs[0]
+
         dialogue = input(f"Enter your dialogue for {chosen_npc.get('name')}: ").strip()
         npc_reply = self.npc_interaction.generate_npc_response(chosen_npc, dialogue)
         print("\nNPC Response:")
@@ -384,7 +381,7 @@ class GameEngine:
                 "visual_description": self.current_location.get("visual_description")
             }
             output["event_summary"] = self.event_summary
-            return output, next_choice
+            return output
 
         # Handle "move to" command.
         if "move to" in player_input.lower():
@@ -418,12 +415,11 @@ class GameEngine:
                 "visual_description": self.current_location.get("visual_description")
             }
             output["event_summary"] = self.event_summary
-            return output, next_choice
+            return output
 
         # Normal narrative cycle.
         game_state = {"location": self.current_location, "summary": self.event_summary, "player": self.player}
         narrative = self.narrative_manager.generate_narrative_segment(game_state, player_input)
-        print("\n" + narrative)
         available_npcs = self.current_location.get("npcs", [])
         active_npcs = self.npc_interaction.determine_active_npcs(available_npcs, narrative, player_input)
         npc_responses = []
@@ -431,15 +427,8 @@ class GameEngine:
             for npc in active_npcs:
                 response = self.npc_interaction.generate_npc_response(npc, player_input)
                 npc_responses.append(response)
-                print("\nNPC Response:")
-                print(f"  Name   : {response.get('name')}")
-                print(f"  Action : {response.get('action')}")
-                print(f"  Speech : {response.get('speech')}")
-        else:
-            print("\nNo NPC interacts at this moment.")
         if npc_responses:
             followup = self.narrative_manager.generate_followup_narrative(npc_responses, self.event_summary)
-            print("\n" + followup)
             self.event_summary = self.narrative_manager.update_event_summary(self.event_summary, "Scene updated after NPC interaction.")
         else:
             followup = ""
@@ -458,20 +447,20 @@ class GameEngine:
             if choice not in default_options:
                 default_options.append(choice)
         self.choice_manager.display_choices(default_options)
+        next_choice = self.choice_manager.capture_player_choice(default_options)
+        self.event_summary = self.narrative_manager.update_event_summary(self.event_summary, f"Player chose: {next_choice}")
+
         output["narrative"] = narrative
         output["npc_responses"] = npc_responses
         output["followup"] = followup
         output["default_choices"] = default_options
+        output["player_choice"] = next_choice
         output["current_location"] = {
             "name": self.current_location.get("name"),
             "visual_description": self.current_location.get("visual_description")
         }
-        print(json.dumps(output, indent=2))
-        next_choice = self.choice_manager.capture_player_choice(default_options)
-        output["player_choice"] = next_choice
-        self.event_summary = self.narrative_manager.update_event_summary(self.event_summary, f"Player chose: {next_choice}")
         output["event_summary"] = self.event_summary
-        return output, next_choice
+        return output
 
 # -----------------------------
 # Main Execution Block
@@ -487,23 +476,23 @@ if __name__ == "__main__":
         print(f"Error loading world content: {e}")
         exit(1)
 
+    # Initialize player and game engine.
     player_name = input("Enter your character's name: ").strip()
     player_role = input("Enter your character's role (e.g., detective, journalist, etc.): ").strip()
     player = PlayerCharacter(player_name, player_role)
-
     engine = GameEngine(world_content, player)
     engine.start_game()
 
-    # Print current state as JSON before first user input.
-    # print("\nCurrent State:")
-    # print(json.dumps(engine.get_state_json(), indent=2))
-
-    # next_action = input("\nEnter your action (or type 'exit' to quit): ").strip()
-    next_action = "Explore the location"
-    while next_action.lower() != "exit":
-        output, next_action = engine.process_player_input(next_action)
-        # print("\nCycle Output:")
-        # print(json.dumps(output, indent=2))
+    # Loop: Print the current state as JSON then prompt for the player's action.
+    while True:
+        # Always display the current state as JSON BEFORE input:
+        current_state = engine.get_state_json()
         print("\nCurrent State:")
-        print(json.dumps(engine.get_state_json(), indent=2))
-        # next_action = input("\nEnter your action (or type 'exit' to quit): ").strip()
+        print(json.dumps(current_state, indent=2))
+        
+        next_action = input("\nEnter your action (or type 'exit' to quit): ").strip()
+        if next_action.lower() == "exit":
+            break
+        output = engine.process_player_input(next_action)
+        print("\nCycle Output:")
+        print(json.dumps(output, indent=2))

@@ -1,0 +1,146 @@
+{
+  "locations": [
+    {
+      "name": "Ravenshade Manor - Grand Foyer",
+      "visual_description": "A towering hall with ornate marble floors, a crimson carpet stretching up a sweeping staircase, and antique paintings watching silently from the walls.",
+      "plot": "The place where the body was first discovered. Everyone passed through here the night of the murder, making it a crucial puzzle piece.",
+      "connections": ["Ravenshade Manor - Study", "Ravenshade Manor - Ballroom", "Ravenshade Manor - Dining Room"],
+      "npcs": [
+        {
+          "name": "Inspector Lydia Crowe",
+          "visual_description": "A composed and intuitive detective in a tailored trench coat and leather gloves, with a gaze that misses nothing.",
+          "motive": "She suspects someone in the house tipped off the killer—and she's determined to flush them out."
+        },
+        {
+          "name": "Julian Blackwell",
+          "visual_description": "A suave but evasive heir with tailored clothes and a knack for shifting conversations.",
+          "motive": "Worried that his father's recent will changes might come to light, which could make him a suspect."
+        }
+      ]
+    },
+    {
+      "name": "Ravenshade Manor - Study",
+      "visual_description": "A richly paneled room filled with dusty ledgers, leather-bound tomes, and a massive desk littered with correspondence.",
+      "plot": "The late patriarch’s study, where suspicious documents were found hidden in a locked drawer—some pages recently removed.",
+      "connections": ["Ravenshade Manor - Grand Foyer", "Ravenshade Manor - Servants' Passage"],
+      "npcs": [
+        {
+          "name": "Julian Blackwell",
+          "visual_description": "A suave but evasive heir with tailored clothes and a knack for shifting conversations.",
+          "motive": "He came looking for the missing inheritance letter before the police could find it."
+        },
+        {
+          "name": "Matilda Grace",
+          "visual_description": "The stern housekeeper, always at the periphery, with sharp eyes and even sharper memories.",
+          "motive": "She believes the master’s death was divine punishment, but hides her own knowledge of the staff’s secret dealings."
+        }
+      ]
+    },
+    {
+      "name": "Ravenshade Manor - Ballroom",
+      "visual_description": "A gilded chamber with a cracked chandelier and faded mirrors, echoing with ghostly remnants of past celebrations.",
+      "plot": "Witnesses claim the lights flickered and someone screamed during the gathering here the night of the murder.",
+      "connections": ["Ravenshade Manor - Grand Foyer", "Ravenshade Manor - Gallery"],
+      "npcs": [
+        {
+          "name": "Vivienne DeLune",
+          "visual_description": "A glamorous opera singer draped in velvet and mystery, her expression perpetually unreadable.",
+          "motive": "The victim was blackmailing her over a hidden scandal—she had motive and access."
+        },
+        {
+          "name": "Inspector Lydia Crowe",
+          "visual_description": "A composed and intuitive detective in a tailored trench coat and leather gloves, with a gaze that misses nothing.",
+          "motive": "This is where she suspects the murderer slipped away after the act."
+        }
+      ]
+    },
+    {
+      "name": "Ravenshade Manor - Dining Room",
+      "visual_description": "A long oak table set for dinner, still bearing untouched dishes from the night of the murder. A shattered wine glass lies near the head seat.",
+      "plot": "The victim’s final meal took place here. Poison is suspected—but the glass suggests a struggle.",
+      "connections": ["Ravenshade Manor - Grand Foyer", "Ravenshade Manor - Kitchen"],
+      "npcs": [
+        {
+          "name": "Chef Henri Duval",
+          "visual_description": "A fiery French chef with a stained apron and a deep distrust of the aristocracy.",
+          "motive": "He despised the victim's cruel treatment of the staff, and saw the dinner as poetic justice."
+        },
+        {
+          "name": "Vivienne DeLune",
+          "visual_description": "A glamorous opera singer draped in velvet and mystery, her expression perpetually unreadable.",
+          "motive": "She tampered with the wine—but did she intend to kill?"
+        }
+      ]
+    },
+    {
+      "name": "Ravenshade Manor - Kitchen",
+      "visual_description": "A warm but chaotic space with cast iron stoves, hanging pots, and a strong scent of herbs. A hidden door leads to the wine cellar.",
+      "plot": "Several bottles in the wine rack are mislabeled—possibly switched to deliver poison unnoticed.",
+      "connections": ["Ravenshade Manor - Dining Room", "Ravenshade Manor - Wine Cellar"],
+      "npcs": [
+        {
+          "name": "Chef Henri Duval",
+          "visual_description": "A fiery French chef with a stained apron and a deep distrust of the aristocracy.",
+          "motive": "He suspects one of the guests framed him using his own kitchen—and wants revenge."
+        },
+        {
+          "name": "Matilda Grace",
+          "visual_description": "The stern housekeeper, always at the periphery, with sharp eyes and even sharper memories.",
+          "motive": "Caught someone sneaking down here after the murder—but hasn’t told anyone yet."
+        }
+      ]
+    },
+    {
+      "name": "Ravenshade Manor - Wine Cellar",
+      "visual_description": "A cold, dim corridor lined with cobweb-covered bottles. The air smells faintly of mold and betrayal.",
+      "plot": "A bottle with a broken seal sits beside a bloodied handkerchief. This may be where the poison originated.",
+      "connections": ["Ravenshade Manor - Kitchen"],
+      "npcs": [
+        {
+          "name": "Julian Blackwell",
+          "visual_description": "A suave but evasive heir with tailored clothes and a knack for shifting conversations.",
+          "motive": "He hid something here—but now it’s missing, and he’s desperate to find it before the inspector does."
+        }
+      ]
+    },
+    {
+      "name": "Ravenshade Manor - Servants' Passage",
+      "visual_description": "A narrow corridor hidden behind the walls, lined with coat hooks and lit by flickering bulbs. Whispers carry down it at night.",
+      "plot": "Many alibis fall apart once the secret doors are known—this passage connects the unconnected.",
+      "connections": ["Ravenshade Manor - Study", "Ravenshade Manor - Wine Cellar", "Ravenshade Manor - Guest Bedroom"],
+      "npcs": [
+        {
+          "name": "Matilda Grace",
+          "visual_description": "The stern housekeeper, always at the periphery, with sharp eyes and even sharper memories.",
+          "motive": "She used the passage to observe the guests—and possibly influence the outcome."
+        }
+      ]
+    },
+    {
+      "name": "Ravenshade Manor - Guest Bedroom",
+      "visual_description": "A lavish room with a canopy bed, velvet drapes, and a suitcase left hastily open. A shattered perfume bottle glistens in the moonlight.",
+      "plot": "The victim spent their last night here. The sheets are disturbed. Someone else may have joined them.",
+      "connections": ["Ravenshade Manor - Servants' Passage"],
+      "npcs": [
+        {
+          "name": "Vivienne DeLune",
+          "visual_description": "A glamorous opera singer draped in velvet and mystery, her expression perpetually unreadable.",
+          "motive": "She was seen leaving this room late at night—claiming it was a misunderstanding."
+        }
+      ]
+    },
+    {
+      "name": "Ravenshade Manor - Gallery",
+      "visual_description": "A vaulted corridor lined with ancestral portraits. Their painted eyes seem to follow every step.",
+      "plot": "One of the paintings contains a hidden compartment—a family secret that casts new suspicion.",
+      "connections": ["Ravenshade Manor - Ballroom"],
+      "npcs": [
+        {
+          "name": "Julian Blackwell",
+          "visual_description": "A suave but evasive heir with tailored clothes and a knack for shifting conversations.",
+          "motive": "Knows what's hidden in the compartment—and fears it could tie him to the murder."
+        }
+      ]
+    }
+  ]
+}
