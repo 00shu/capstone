@@ -93,7 +93,8 @@ class NarrativeManager:
             "the scene and reflects the characters' motives:\n"
             f"NPC Interactions: {npc_responses}\n"
             f"Event Summary: {previous_summary}\n"
-            "Keep it short and focused on current developments."
+            "Keep it short and focused on current developments.\n"
+            "Don't repeat the original dialouges on the NPCs, and should focus on narrative of the NPCs reaction to each others dialouges"
         )
         llm_response = self.llm_client.call_llm(prompt)
         return f"Update: {llm_response}"
@@ -283,7 +284,7 @@ class GameEngine:
             self.event_summary = self.narrative_manager.update_event_summary(self.event_summary, event)
             print(f"Event summary updated: {self.event_summary}")
 
-    def handle_talk_option(self, active_npcs: List[Dict[str, str]], npc_index: int, dialogue: str) -> Dict[str, Any]:
+    def handle_talk_option(self, active_npcs: List[Dict[str, str]], npc_index: int, dialogue: str, player_choice: str) -> Dict[str, Any]:
         """
         Now receives:
         - active_npcs (the possible NPCs),
@@ -315,19 +316,37 @@ class GameEngine:
         )
 
         output["npc_responses"] = [npc_reply]
+        available_npcs = self.current_location.get("npcs", [])
+        output["available_npcs"] = available_npcs
         output["followup"] = followup
+        default_options = engine.generate_default_choices(player_choice)
+        output["default_choices"] = default_options
+        output["current_location"] = {
+            "name": self.current_location.get("name"),
+            "visual_description": self.current_location.get("visual_description")
+        }
+        print(json.dumps(output, indent=2))
+        #engine.choice_manager.display_choices(default_options)
+        next_choice = self.choice_manager.capture_player_choice(default_options)
+        print(f"\nYou chose: {next_choice}")
+        self.event_summary = self.narrative_manager.update_event_summary(self.event_summary, f"Player chose: {next_choice}")
+        output["player_choice"] = next_choice
+        output["event_summary"] = self.event_summary
         return output
 
     def handle_move_option(self, connections: List[str]) -> Dict[str, Any]:
         output = {}
+        available_places = ""
         if not connections:
             print("No connected locations available.")
             output["narrative"] = ""
             return output
 
-        print("\nChoose a destination:")
+        #print("\nChoose a destination:")
         for idx, loc in enumerate(connections, start=1):
-            print(f"  {idx}. {loc}")
+            available_places += f"  {idx}. {loc}\n"
+        output["available_places"]= available_places
+        print(json.dumps(output, indent=2))
         selection = input("Enter the number corresponding to your destination: ").strip()
         try:
             selected_index = int(selection) - 1
@@ -345,7 +364,27 @@ class GameEngine:
         game_state = {"location": self.current_location, "summary": self.event_summary, "player": self.player}
         narrative = self.narrative_manager.generate_narrative_segment(game_state, "Arrived at new location")
         print("\n" + narrative)
+        
+        
+        output = {}
+        output["current_location"] = {
+            "name": self.current_location.get("name"),
+            "visual_description": self.current_location.get("visual_description")
+        }
         output["narrative"] = narrative
+        available_npcs = self.current_location.get("npcs", [])
+        output["available_npcs"] = available_npcs
+        default_options = engine.generate_default_choices(f"Move to {chosen_location}")
+        output["default_choices"] = default_options
+        print(json.dumps(output, indent=2))
+        
+        next_choice = self.choice_manager.capture_player_choice(default_options)
+        print(f"\nYou chose: {next_choice}")
+        self.event_summary = self.narrative_manager.update_event_summary(self.event_summary, f"Player chose: {next_choice}")
+        output["player_choice"] = next_choice
+        output["event_summary"] = self.event_summary
+        
+        
         return output
     def process_player_input(self, player_input: str) -> Dict[str, Any]:
         output = {}
@@ -409,21 +448,25 @@ class GameEngine:
                 default_options.append(choice)
 
         # 3. Display the choices and capture one user input.
-        self.choice_manager.display_choices(default_options)
-        next_choice = self.choice_manager.capture_player_choice(default_options)
-        print(f"\nYou chose: {next_choice}")
-        self.event_summary = self.narrative_manager.update_event_summary(self.event_summary, f"Player chose: {next_choice}")
+        
         
         # Return the complete cycle output.
         output["narrative"] = narrative
         output["npc_responses"] = npc_responses
+        output["available_npcs"] = available_npcs
         output["followup"] = followup
+        #output["active_npcs"] = active_npcs
         output["default_choices"] = default_options
-        output["player_choice"] = next_choice
         output["current_location"] = {
             "name": self.current_location.get("name"),
             "visual_description": self.current_location.get("visual_description")
         }
+        self.choice_manager.display_choices(default_options)
+        print(json.dumps(output, indent=2))
+        next_choice = self.choice_manager.capture_player_choice(default_options)
+        print(f"\nYou chose: {next_choice}")
+        self.event_summary = self.narrative_manager.update_event_summary(self.event_summary, f"Player chose: {next_choice}")
+        output["player_choice"] = next_choice
         output["event_summary"] = self.event_summary
         
         print(json.dumps(output, indent=2))
@@ -480,16 +523,17 @@ if __name__ == "__main__":
     engine = GameEngine(world_content, player)
     engine.start_game()
 
-    print("\nCurrent State:")
-    print(json.dumps(engine.get_state_json(), indent=2))
+    # print("\nCurrent State:")
+    # print(json.dumps(engine.get_state_json(), indent=2))
 
-    next_action = input("\nEnter your action (or type 'exit' to quit): ").strip()
+    # next_action = input("\nEnter your action (or type 'exit' to quit): ").strip()
+    next_action = "Explore the area"
     while next_action.lower() != "exit":
         # Process the entered action (narrative, NPC responses, etc.)
-        output = engine.process_player_input(next_action)
+        
 
         # Branch if the player chose a talk option.
-        player_choice = output.get("player_choice", "")
+        player_choice = next_action
         if player_choice.lower().startswith("talk to"):
             available_npcs = engine.current_location.get("npcs", [])
             if available_npcs:
@@ -505,37 +549,40 @@ if __name__ == "__main__":
                 except ValueError:
                     print("Invalid input. Defaulting to the first NPC.")
                     npc_index = 0
+                player_choice += f"{available_npcs[npc_index].get('name')}"
                 dialogue = input(f"Enter your dialogue for {available_npcs[npc_index].get('name')}: ").strip()
-                talk_result = engine.handle_talk_option(available_npcs, npc_index, dialogue)
-                print("\nNPC Response from detailed talk:")
-                for reply in talk_result.get("npc_responses", []):
-                    print(json.dumps(reply, indent=2))
-                print("\nFollow-up:", talk_result.get("followup", ""))
-                default_options = engine.generate_default_choices(next_action)
-                engine.choice_manager.display_choices(default_options)
-                next_action = input("\nEnter your action (or type 'exit' to quit): ").strip()
+                talk_result = engine.handle_talk_option(available_npcs, npc_index, dialogue, player_choice)
+                # print("\nNPC Response from detailed talk:")
+                # for reply in talk_result.get("npc_responses", []):
+                #     print(json.dumps(reply, indent=2))
+                #print("\nFollow-up:", talk_result.get("followup", ""))
+                # default_options = engine.generate_default_choices(next_action)
+                # engine.choice_manager.display_choices(default_options)
+                next_action = talk_result.get("player_choice", "")
         
         # Branch if the player chose a move option.
         elif player_choice.lower().startswith("move to"):
             connections = engine.current_location.get("connections", [])
             if connections:
-                print("\nWhere do you want to go?")
-                for idx, loc in enumerate(connections, start=1):
-                    print(f"  {idx}. {loc}")
-                loc_choice_str = input("Enter the number corresponding to your destination: ").strip()
-                try:
-                    loc_index = int(loc_choice_str) - 1
-                    if not (0 <= loc_index < len(connections)):
-                        print("Invalid selection. Defaulting to the first option.")
-                        loc_index = 0
-                except ValueError:
-                    print("Invalid input. Defaulting to the first option.")
-                    loc_index = 0
-                chosen_location = connections[loc_index]
-                engine.update_game_state(new_location_name=chosen_location, event=f"Moved to {chosen_location}")
-                default_options = engine.generate_default_choices(next_action)
-                engine.choice_manager.display_choices(default_options)
-                next_action = input("\nEnter your action (or type 'exit' to quit): ").strip()
+                # print("\nWhere do you want to go?")
+                # for idx, loc in enumerate(connections, start=1):
+                #     print(f"  {idx}. {loc}")
+                # loc_choice_str = input("Enter the number corresponding to your destination: ").strip()
+                # try:
+                #     loc_index = int(loc_choice_str) - 1
+                #     if not (0 <= loc_index < len(connections)):
+                #         print("Invalid selection. Defaulting to the first option.")
+                #         loc_index = 0
+                # except ValueError:
+                #     print("Invalid input. Defaulting to the first option.")
+                #     loc_index = 0
+                # chosen_location = connections[loc_index]
+                output = engine.handle_move_option(connections)
+                # engine.update_game_state(new_location_name=chosen_location, event=f"Moved to {chosen_location}")
+                # default_options = engine.generate_default_choices(next_action)
+                # engine.choice_manager.display_choices(default_options)
+                # next_action = input("\nEnter your action (or type 'exit' to quit): ").strip()
+                next_action = output.get("player_choice", "")
             else:
                 print("No connected locations available.")
         
@@ -543,6 +590,9 @@ if __name__ == "__main__":
         # generate and display the default choices before the next input.
         
         else:
-            next_action = player_choice
+            #next_action = player_choice
+            output = engine.process_player_input(next_action)
+            next_action = output.get("player_choice", "")
+            # next_action = input("\nEnter your action (or type 'exit' to quit): ").strip()
 
 
