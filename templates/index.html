@@ -1,0 +1,743 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Murder Mystery Game</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <style>
+        body {
+            background-color: #1a1a1a;
+            color: #ffffff;
+            font-family: 'Arial', sans-serif;
+        }
+        #game-container {
+            position: relative;
+            height: 100vh;
+            overflow: hidden;
+        }
+        #background-image {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+            z-index: 1;
+        }
+        #npc-container {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 70%; /* Reduced height to leave space for narrative */
+            z-index: 2;
+        }
+        .npc {
+            position: absolute;
+            cursor: pointer;
+            transition: transform 0.3s;
+            text-align: center;
+        }
+        .npc:hover {
+            transform: scale(1.1);
+        }
+        .npc:hover .npc-response {
+            display: block;
+        }
+        .npc-response {
+            position: absolute;
+            background-color: rgba(0, 0, 0, 0.9);
+            color: white;
+            padding: 15px;
+            border-radius: 5px;
+            max-width: 400px;
+            min-width: 300px;
+            font-size: 0.9em;
+            display: none;
+            left: 50%;
+            transform: translate(-50%, -120%);
+            white-space: pre-wrap;
+            z-index: 10;
+            top: 0;
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.5);
+        }
+        #narrative-container {
+            position: absolute;
+            bottom: 0;
+            left: 0;
+            width: 100%;
+            height: 30%;
+            background-color: rgba(0, 0, 0, 0.8);
+            padding: 20px;
+            z-index: 3;
+            overflow-y: auto;
+            font-size: 1.1em;
+            line-height: 1.5;
+        }
+        #narrative-toggle {
+            position: absolute;
+            bottom: calc(30% + 10px);
+            right: 20px;
+            z-index: 4;
+            background-color: #4a4a4a;
+            color: white;
+            border: none;
+            padding: 8px 15px;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 0.9em;
+        }
+        #narrative-toggle:hover {
+            background-color: #666666;
+        }
+        #choices-container {
+            position: absolute;
+            right: 20px;
+            top: 50%;
+            transform: translateY(-50%);
+            z-index: 3;
+            background-color: rgba(0, 0, 0, 0.8);
+            padding: 20px;
+            border-radius: 10px;
+            max-height: 80vh;
+            overflow-y: auto;
+            display: none;
+        }
+        .choice-btn {
+            margin: 5px;
+            background-color: #4a4a4a;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 5px;
+            cursor: pointer;
+            width: 100%;
+            text-align: left;
+            transition: background-color 0.3s;
+        }
+        .choice-btn:hover {
+            background-color: #666666;
+        }
+        .choice-btn.selected {
+            background-color: #2ecc71;
+        }
+        .choice-btn.selected:hover {
+            background-color: #27ae60;
+        }
+        #options-toggle {
+            position: fixed; /* Changed to fixed */
+            right: 20px;
+            top: 20px;
+            z-index: 4; /* Increased z-index */
+            background-color: #4a4a4a;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 5px;
+            cursor: pointer;
+        }
+        #options-toggle:hover {
+            background-color: #666666;
+        }
+        #initial-choice {
+            position: absolute;
+            bottom: 20px;
+            left: 50%;
+            transform: translateX(-50%);
+            z-index: 3;
+            background-color: rgba(0, 0, 0, 0.8);
+            padding: 20px;
+            border-radius: 10px;
+            text-align: center;
+        }
+        #initial-choice .choice-btn {
+            background-color: #2ecc71;
+            font-size: 1.2em;
+            padding: 15px 30px;
+        }
+        #initial-choice .choice-btn:hover {
+            background-color: #27ae60;
+        }
+        #dialogue-input {
+            position: absolute;
+            bottom: 100px;
+            left: 50%;
+            transform: translateX(-50%);
+            z-index: 3;
+            display: none;
+        }
+        #llm-status {
+            position: fixed; /* Changed to fixed */
+            top: 20px;
+            left: 50%;
+            transform: translateX(-50%);
+            background-color: rgba(0, 0, 0, 0.8);
+            padding: 10px 20px;
+            border-radius: 5px;
+            z-index: 4;
+            display: none;
+        }
+        .processing {
+            color: #ffd700;
+        }
+        #location-buttons {
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            z-index: 5;
+            display: none;
+            background-color: rgba(0, 0, 0, 0.9);
+            padding: 20px;
+            border-radius: 10px;
+            text-align: center;
+            min-width: 300px;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.5);
+        }
+        #location-buttons button {
+            margin: 5px;
+            background-color: #4a4a4a;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 5px;
+            cursor: pointer;
+            width: 100%;
+            text-align: left;
+            transition: background-color 0.3s;
+        }
+        #location-buttons button:hover {
+            background-color: #666666;
+        }
+    </style>
+</head>
+<body>
+    <div id="game-container">
+        <img id="background-image" src="" alt="Location Background">
+        <div id="npc-container"></div>
+        <div id="narrative-container"></div>
+        <button id="options-toggle">Options</button>
+        <div id="choices-container"></div>
+        <div id="initial-choice"></div>
+        <div id="dialogue-input">
+            <input type="text" class="form-control" placeholder="Enter your dialogue...">
+            <button class="btn btn-primary mt-2" onclick="sendDialogue()">Send</button>
+        </div>
+        <div id="llm-status">Processing...</div>
+        <div id="location-buttons"></div>
+        <button id="narrative-toggle" onclick="toggleNarrative()">Show Followup</button>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/js/bootstrap.bundle.min.js"></script>
+    <script>
+        let currentState = null;
+        let selectedNPC = null;
+
+        // Start game
+        async function startGame() {
+            try {
+                const playerName = prompt("Enter your character's name:");
+                const playerRole = prompt("Enter your character's role:");
+                
+                if (!playerName || !playerRole) {
+                    alert('Please enter both name and role');
+                    return;
+                }
+                
+                const response = await fetch('/start_game', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        player_name: playerName,
+                        player_role: playerRole
+                    })
+                });
+                
+                if (!response.ok) {
+                    throw new Error(`HTTP error! status: ${response.status}`);
+                }
+                
+                const data = await response.json();
+                console.log('Game started with data:', data);
+                updateGameState(data);
+            } catch (error) {
+                console.error('Error starting game:', error);
+                alert('Failed to start game. Please try again.');
+            }
+        }
+
+        // Update game state
+        function updateGameState(state) {
+            console.log('Updating game state:', state);
+            
+            // Update current state
+            currentState = state;
+            
+            // Store narrative and followup separately
+            currentState.savedNarrative = state.narrative || '';
+            currentState.savedFollowup = state.followup || '';
+            
+            // Update background with forced cache busting
+            if (state.current_location && state.current_location.name) {
+                const locationName = encodeURIComponent(state.current_location.name);
+                const backgroundImage = document.getElementById('background-image');
+                const backgroundUrl = `/assets/location/${locationName}.png`;
+                console.log('Loading background image:', backgroundUrl);
+                
+                // Force image reload by adding timestamp
+                const timestamp = state.timestamp || new Date().getTime();
+                const imageUrlWithCache = `${backgroundUrl}?t=${timestamp}`;
+                
+                // Clear the current src first to force reload
+                backgroundImage.src = '';
+                
+                // Create a new image to preload
+                const newImage = new Image();
+                newImage.onload = function() {
+                    console.log('Background image loaded successfully');
+                    backgroundImage.src = imageUrlWithCache;
+                    backgroundImage.style.display = 'block';
+                    backgroundImage.style.backgroundColor = '';
+                };
+                newImage.onerror = function() {
+                    console.error(`Failed to load background image: ${imageUrlWithCache}`);
+                    backgroundImage.style.backgroundColor = '#2c3e50';
+                    backgroundImage.style.display = 'block';
+                };
+                newImage.src = imageUrlWithCache;
+            }
+            
+            // Update NPCs with the same timestamp for cache busting
+            const npcContainer = document.getElementById('npc-container');
+            npcContainer.innerHTML = '';
+            if (state.available_npcs && state.available_npcs.length > 0) {
+                state.available_npcs.forEach((npc, index) => {
+                    const npcElement = document.createElement('div');
+                    npcElement.className = 'npc';
+                    npcElement.style.left = `${Math.random() * 60 + 20}%`;
+                    npcElement.style.top = `${Math.random() * 50 + 20}%`;
+                    
+                    // Create NPC image/placeholder with forced cache busting
+                    const npcImage = document.createElement('img');
+                    const npcImageName = encodeURIComponent(npc.name);
+                    const npcUrl = `/assets/npc/${npcImageName}.png`;
+                    
+                    // Use the same timestamp for consistency
+                    const timestamp = state.timestamp || new Date().getTime();
+                    const npcUrlWithCache = `${npcUrl}?t=${timestamp}`;
+                    
+                    // Clear the src first
+                    npcImage.src = '';
+                    npcImage.src = npcUrlWithCache;
+                    npcImage.alt = npc.name;
+                    npcImage.style.width = '100px';
+                    
+                    // Then also preload to handle load/error events
+                    const newNPCImage = new Image();
+                    newNPCImage.onload = function() {
+                        console.log(`NPC image loaded successfully: ${npc.name}`);
+                        npcImage.style.display = 'block';
+                    };
+                    newNPCImage.onerror = function() {
+                        console.error(`Failed to load NPC image: ${npcUrlWithCache}`);
+                        npcImage.style.display = 'none';
+                        npcElement.innerHTML = `<div style="background-color: #34495e; color: white; padding: 10px; border-radius: 5px;">${npc.name}</div>`;
+                    };
+                    newNPCImage.src = npcUrlWithCache;
+                    
+                    npcElement.appendChild(npcImage);
+                    
+                    // Add NPC name label
+                    const nameLabel = document.createElement('div');
+                    nameLabel.style.marginTop = '5px';
+                    nameLabel.style.color = 'white';
+                    nameLabel.style.backgroundColor = 'rgba(0, 0, 0, 0.7)';
+                    nameLabel.style.padding = '5px';
+                    nameLabel.style.borderRadius = '3px';
+                    nameLabel.textContent = npc.name;
+                    npcElement.appendChild(nameLabel);
+                    
+                    // Add NPC response bubble
+                    const responseElement = document.createElement('div');
+                    responseElement.className = 'npc-response';
+                    if (state.npc_responses) {
+                        const npcResponse = state.npc_responses.find(response => response.name === npc.name);
+                        if (npcResponse) {
+                            responseElement.textContent = `${npcResponse.action}: "${npcResponse.speech}"`;
+                        } else {
+                            responseElement.textContent = npc.visual_description || "...";
+                        }
+                    } else {
+                        responseElement.textContent = npc.visual_description || "...";
+                    }
+                    npcElement.appendChild(responseElement);
+                    
+                    npcElement.onclick = () => handleNPCClick(npc, index);
+                    npcContainer.appendChild(npcElement);
+                });
+            }
+            
+            // Update narrative
+            const narrativeContainer = document.getElementById('narrative-container');
+            updateNarrativeDisplay();
+            
+            // Update choices
+            const choicesContainer = document.getElementById('choices-container');
+            choicesContainer.innerHTML = '';
+            if (state.default_choices && state.default_choices.length > 0) {
+                state.default_choices.forEach(choice => {
+                    const button = document.createElement('button');
+                    button.className = 'choice-btn';
+                    button.textContent = choice;
+                    button.onclick = () => handleChoice(choice);
+                    choicesContainer.appendChild(button);
+                });
+            } else {
+                choicesContainer.innerHTML = '<p>No choices available</p>';
+            }
+            
+            // Remove initial choice section
+            const initialChoice = document.getElementById('initial-choice');
+            initialChoice.style.display = 'none';
+        }
+
+        // Handle NPC click
+        function handleNPCClick(npc, index) {
+            selectedNPC = { npc, index };
+            const dialogueInput = document.getElementById('dialogue-input');
+            dialogueInput.style.display = 'block';
+            const input = dialogueInput.querySelector('input');
+            input.value = '';
+            input.focus();
+            
+            // Add enter key handler
+            input.onkeypress = function(e) {
+                if (e.key === 'Enter') {
+                    sendDialogue();
+                }
+            };
+        }
+
+        // Send dialogue
+        async function sendDialogue() {
+            if (!selectedNPC) return;
+            
+            const input = document.getElementById('dialogue-input').querySelector('input');
+            const dialogue = input.value.trim();
+            
+            if (!dialogue) {
+                alert('Please enter some dialogue');
+                return;
+            }
+            
+            const llmStatus = document.getElementById('llm-status');
+            llmStatus.style.display = 'block';
+            llmStatus.classList.add('processing');
+            
+            try {
+                const response = await fetch('/handle_talk', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        npc_index: selectedNPC.index,
+                        dialogue: dialogue,
+                        player_choice: `Talk to ${selectedNPC.npc.name}`
+                    })
+                });
+                
+                if (!response.ok) {
+                    throw new Error(`HTTP error! status: ${response.status}`);
+                }
+                
+                const data = await response.json();
+                updateGameState(data);
+                
+                // Reset and hide dialogue input
+                input.value = '';
+                document.getElementById('dialogue-input').style.display = 'none';
+                
+                // Deselect any selected buttons
+                document.querySelectorAll('.choice-btn').forEach(btn => {
+                    btn.classList.remove('selected');
+                });
+                
+                // Reset selectedNPC
+                selectedNPC = null;
+                
+            } catch (error) {
+                console.error('Error sending dialogue:', error);
+                alert('Failed to send dialogue. Please try again.');
+            } finally {
+                llmStatus.style.display = 'none';
+                llmStatus.classList.remove('processing');
+            }
+        }
+
+        // Handle choice selection
+        async function handleChoice(choice) {
+            const llmStatus = document.getElementById('llm-status');
+            
+            // Toggle selection state of the clicked button
+            const buttons = document.querySelectorAll('.choice-btn');
+            buttons.forEach(btn => {
+                if (btn.textContent === choice) {
+                    btn.classList.toggle('selected');
+                    if (!btn.classList.contains('selected')) {
+                        // If deselected, just return without making API call
+                        hideLocationButtons();
+                        return;
+                    }
+                } else {
+                    btn.classList.remove('selected');
+                }
+            });
+            
+            // If it's a move option, show location buttons
+            if (choice.startsWith('Move to')) {
+                const connections = currentState.current_location.connections;
+                if (connections && connections.length > 0) {
+                    showLocationButtons(connections);
+                    return; // Don't make API call yet
+                }
+            }
+            
+            llmStatus.style.display = 'block';
+            llmStatus.classList.add('processing');
+            
+            try {
+                let response;
+                if (choice.startsWith('Talk to')) {
+                    // Handle talk option
+                    response = await fetch('/handle_talk', {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json'
+                        },
+                        body: JSON.stringify({
+                            npc_index: selectedNPC ? selectedNPC.index : 0,
+                            dialogue: document.getElementById('dialogue-input').querySelector('input').value,
+                            player_choice: choice
+                        })
+                    });
+                } else {
+                    // Handle other choices
+                    response = await fetch('/process_input', {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json'
+                        },
+                        body: JSON.stringify({
+                            input: choice
+                        })
+                    });
+                }
+                
+                if (!response.ok) {
+                    throw new Error(`HTTP error! status: ${response.status}`);
+                }
+                
+                const data = await response.json();
+                console.log('Received game state:', data);
+                updateGameState(data);
+                
+                // Hide dialogue input and location buttons if they were shown
+                document.getElementById('dialogue-input').style.display = 'none';
+                hideLocationButtons();
+                selectedNPC = null;
+                
+            } catch (error) {
+                console.error('Error handling choice:', error);
+                alert('Failed to process your choice. Please try again.');
+            } finally {
+                llmStatus.style.display = 'none';
+                llmStatus.classList.remove('processing');
+            }
+        }
+
+        // Show location buttons
+        function showLocationButtons(connections) {
+            // Create or get the location buttons container
+            let locationButtons = document.getElementById('location-buttons');
+            if (!locationButtons) {
+                locationButtons = document.createElement('div');
+                locationButtons.id = 'location-buttons';
+                document.body.appendChild(locationButtons);
+            }
+            
+            // Clear previous buttons
+            locationButtons.innerHTML = `
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px;">
+                    <h5 style="color: white; margin: 0;">Choose a destination:</h5>
+                    <button onclick="hideLocationButtons()" style="background: none; border: none; color: white; cursor: pointer; font-size: 20px;">&times;</button>
+                </div>
+            `;
+            
+            // Add buttons for each location
+            connections.forEach(location => {
+                const button = document.createElement('button');
+                button.textContent = location;
+                button.onclick = () => handleMoveToLocation(location);
+                locationButtons.appendChild(button);
+            });
+            
+            // Show the container
+            locationButtons.style.display = 'block';
+        }
+
+        // Hide location buttons
+        function hideLocationButtons() {
+            const locationButtons = document.getElementById('location-buttons');
+            if (locationButtons) {
+                locationButtons.style.display = 'none';
+            }
+            // Deselect the "Move to" button
+            document.querySelectorAll('.choice-btn').forEach(btn => {
+                if (btn.textContent.startsWith('Move to')) {
+                    btn.classList.remove('selected');
+                }
+            });
+        }
+
+        // Handle move to location
+        async function handleMoveToLocation(location) {
+            const llmStatus = document.getElementById('llm-status');
+            llmStatus.style.display = 'block';
+            llmStatus.classList.add('processing');
+            
+            try {
+                // First, handle the move
+                const moveResponse = await fetch('/handle_move', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        connections: currentState.current_location.connections,
+                        chosen_location: location
+                    })
+                });
+                
+                if (!moveResponse.ok) {
+                    throw new Error(`HTTP error! status: ${moveResponse.status}`);
+                }
+                
+                const moveData = await moveResponse.json();
+                console.log('Move response:', moveData);
+                
+                // Force a fresh timestamp for the new location's assets
+                moveData.timestamp = new Date().getTime();
+                
+                // Update the game state with move data first
+                updateGameState(moveData);
+                
+                // Then, trigger narrative generation for the new location
+                const narrativeResponse = await fetch('/process_input', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        input: `Arrived at ${location}`
+                    })
+                });
+                
+                if (!narrativeResponse.ok) {
+                    throw new Error(`HTTP error! status: ${narrativeResponse.status}`);
+                }
+                
+                const narrativeData = await narrativeResponse.json();
+                console.log('Narrative response:', narrativeData);
+                
+                // Update the narrative while preserving the current location, NPCs, and timestamp
+                const combinedState = {
+                    ...narrativeData,
+                    current_location: moveData.current_location,
+                    available_npcs: moveData.available_npcs,
+                    default_choices: moveData.default_choices,
+                    timestamp: moveData.timestamp // Preserve the timestamp
+                };
+                
+                // Force reload of images by clearing them first
+                const backgroundImage = document.getElementById('background-image');
+                backgroundImage.src = '';
+                const npcContainer = document.getElementById('npc-container');
+                npcContainer.innerHTML = '';
+                
+                // Update game state with combined data
+                updateGameState(combinedState);
+                
+            } catch (error) {
+                console.error('Error moving to location:', error);
+                alert('Failed to move to the selected location. Please try again.');
+            } finally {
+                // Hide location buttons and deselect move button
+                hideLocationButtons();
+                llmStatus.style.display = 'none';
+                llmStatus.classList.remove('processing');
+            }
+        }
+
+        // Check LLM status periodically
+        async function checkLLMStatus() {
+            const response = await fetch('/get_llm_status');
+            const status = await response.json();
+            const llmStatus = document.getElementById('llm-status');
+            
+            if (status.is_processing) {
+                llmStatus.style.display = 'block';
+                llmStatus.classList.add('processing');
+            } else {
+                llmStatus.style.display = 'none';
+                llmStatus.classList.remove('processing');
+            }
+        }
+
+        // Start periodic status check
+        setInterval(checkLLMStatus, 1000);
+
+        // Toggle options panel
+        document.getElementById('options-toggle').onclick = function() {
+            const choicesContainer = document.getElementById('choices-container');
+            const isVisible = choicesContainer.style.display === 'block';
+            choicesContainer.style.display = isVisible ? 'none' : 'block';
+            this.textContent = isVisible ? 'Options' : 'Close';
+            this.style.backgroundColor = isVisible ? '#4a4a4a' : '#666666';
+        };
+
+        // Add narrative toggle functionality
+        function updateNarrativeDisplay() {
+            const narrativeContainer = document.getElementById('narrative-container');
+            const toggleButton = document.getElementById('narrative-toggle');
+            const showingFollowup = toggleButton && toggleButton.textContent === 'Show Followup';
+            
+            if (currentState) {
+                if (showingFollowup && currentState.savedFollowup) {
+                    narrativeContainer.innerHTML = currentState.savedFollowup;
+                } else {
+                    narrativeContainer.innerHTML = currentState.savedNarrative;
+                }
+                narrativeContainer.scrollTop = narrativeContainer.scrollHeight;
+            }
+        }
+
+        // Toggle between narrative and followup
+        function toggleNarrative() {
+            const toggleButton = document.getElementById('narrative-toggle');
+            if (toggleButton.textContent === 'Show Followup') {
+                toggleButton.textContent = 'Show Narrative';
+            } else {
+                toggleButton.textContent = 'Show Followup';
+            }
+            updateNarrativeDisplay();
+        }
+
+        // Start the game when the page loads
+        window.onload = startGame;
+    </script>
+</body>
+</html>
