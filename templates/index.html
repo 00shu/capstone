@@ -229,7 +229,21 @@
         <button id="narrative-toggle" onclick="toggleNarrative()">Show Followup</button>
     </div>
 
-    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/js/bootstrap.bundle.min.js">
+function keepInView(el) {
+    const rect = el.getBoundingClientRect();
+    const padding = 10;
+    if (rect.left < padding) {
+        el.style.left = `${padding}px`;
+        el.style.transform = 'none';
+    } else if (rect.right > window.innerWidth - padding) {
+        el.style.left = 'auto';
+        el.style.right = `${padding}px`;
+        el.style.transform = 'none';
+    }
+}
+
+</script>
     <script>
         let currentState = null;
         let selectedNPC = null;
@@ -317,8 +331,11 @@
                 state.available_npcs.forEach((npc, index) => {
                     const npcElement = document.createElement('div');
                     npcElement.className = 'npc';
-                    npcElement.style.left = `${Math.random() * 60 + 20}%`;
-                    npcElement.style.top = `${Math.random() * 50 + 20}%`;
+                    const isLeftSide = index % 2 === 0;
+    npcElement.style.left = isLeftSide ? '50px' : 'unset';
+    npcElement.style.right = isLeftSide ? 'unset' : '50px';
+    npcElement.style.bottom = '100px';
+    npcElement.style.top = 'unset';
                     
                     // Create NPC image/placeholder with forced cache busting
                     const npcImage = document.createElement('img');
@@ -374,6 +391,7 @@
                         responseElement.textContent = npc.visual_description || "...";
                     }
                     npcElement.appendChild(responseElement);
+setTimeout(() => keepInView(responseElement), 0);
                     
                     npcElement.onclick = () => handleNPCClick(npc, index);
                     npcContainer.appendChild(npcElement);
@@ -738,6 +756,20 @@
 
         // Start the game when the page loads
         window.onload = startGame;
-    </script>
+    
+function keepInView(el) {
+    const rect = el.getBoundingClientRect();
+    const padding = 10;
+    if (rect.left < padding) {
+        el.style.left = `${padding}px`;
+        el.style.transform = 'none';
+    } else if (rect.right > window.innerWidth - padding) {
+        el.style.left = 'auto';
+        el.style.right = `${padding}px`;
+        el.style.transform = 'none';
+    }
+}
+
+</script>
 </body>
 </html>
