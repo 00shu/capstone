@@ -125,21 +125,12 @@ class NarrativeManager:
 # -----------------------------
 class ChoiceManager:
     def display_choices(self, choices: List[str]) -> None:
-        print("\nYour choices:")
-        for idx, choice in enumerate(choices, start=1):
-            print(f"  {idx}. {choice}")
+        # Web UI handles display of choices
+        pass
 
     def capture_player_choice(self, choices: List[str]) -> str:
-        user_input = input("Enter your choice (number or custom option): ").strip()
-        if user_input.isdigit():
-            selection = int(user_input)
-            if 1 <= selection <= len(choices):
-                return choices[selection - 1]
-            else:
-                print("Choice number out of range; using your text as custom option.")
-                return user_input
-        else:
-            return user_input if user_input else (choices[0] if choices else "")
+        # Web UI handles choice capture
+        return choices[0] if choices else ""
 
 # -----------------------------
 # NPC Interaction Module
@@ -267,11 +258,8 @@ class GameEngine:
         if self.world.get("locations"):
             self.current_location = self.world["locations"][0]
             self.event_summary = f"Game started at {self.current_location['name']}."
-            print(f"Starting game at: {self.current_location['name']}")
-            print(f"Location description: {self.current_location['visual_description']}")
-            print(f"Player Character: {self.player}")
         else:
-            print("World content is empty. Unable to start the game.")
+            raise ValueError("World content is empty. Unable to start the game.")
 
     def update_game_state(self, new_location_name: str = None, event: str = None):
         if new_location_name:
@@ -285,27 +273,17 @@ class GameEngine:
             print(f"Event summary updated: {self.event_summary}")
 
     def handle_talk_option(self, active_npcs: List[Dict[str, str]], npc_index: int, dialogue: str, player_choice: str) -> Dict[str, Any]:
-        """
-        Now receives:
-        - active_npcs (the possible NPCs),
-        - npc_index (which NPC the user chose in the main loop),
-        - dialogue (what the user typed in the main loop).
-
-        Returns NPC response data but does not prompt the user.
-        """
         output = {}
         if not active_npcs:
             output["npc_responses"] = []
             output["followup"] = ""
             return output
 
-        # Safely pick the user's selection
         if 0 <= npc_index < len(active_npcs):
             chosen_npc = active_npcs[npc_index]
         else:
             chosen_npc = active_npcs[0]
 
-        # Generate NPC's response
         npc_reply = self.npc_interaction.generate_npc_response(chosen_npc, dialogue, self.event_summary)
         self.event_summary = self.narrative_manager.update_event_summary(
             self.event_summary, f"Player talked to {chosen_npc.get('name')}: {dialogue}"
@@ -319,88 +297,61 @@ class GameEngine:
         available_npcs = self.current_location.get("npcs", [])
         output["available_npcs"] = available_npcs
         output["followup"] = followup
-        default_options = engine.generate_default_choices(player_choice)
+        default_options = self.generate_default_choices(player_choice)
         output["default_choices"] = default_options
         output["current_location"] = {
             "name": self.current_location.get("name"),
-            "visual_description": self.current_location.get("visual_description")
+            "visual_description": self.current_location.get("visual_description"),
+            "connections": self.current_location.get("connections", []),
+            "npcs": self.current_location.get("npcs", [])
         }
-        print(json.dumps(output, indent=2))
-        #engine.choice_manager.display_choices(default_options)
-        next_choice = self.choice_manager.capture_player_choice(default_options)
-        print(f"\nYou chose: {next_choice}")
-        self.event_summary = self.narrative_manager.update_event_summary(self.event_summary, f"Player chose: {next_choice}")
-        output["player_choice"] = next_choice
         output["event_summary"] = self.event_summary
         return output
 
     def handle_move_option(self, connections: List[str]) -> Dict[str, Any]:
         output = {}
-        available_places = ""
         if not connections:
-            print("No connected locations available.")
-            output["narrative"] = ""
+            output["narrative"] = "No connected locations available."
             return output
 
-        #print("\nChoose a destination:")
-        for idx, loc in enumerate(connections, start=1):
-            available_places += f"  {idx}. {loc}\n"
-        output["available_places"]= available_places
-        print(json.dumps(output, indent=2))
-        selection = input("Enter the number corresponding to your destination: ").strip()
-        try:
-            selected_index = int(selection) - 1
-            if 0 <= selected_index < len(connections):
-                chosen_location = connections[selected_index]
-            else:
-                print("Invalid selection. Defaulting to the first option.")
-                chosen_location = connections[0]
-        except ValueError:
-            print("Invalid input. Defaulting to the first option.")
-            chosen_location = connections[0]
+        # Update the game state with the new location
+        chosen_location = connections[0]  # We now receive the chosen location as the first item
         self.update_game_state(new_location_name=chosen_location, event=f"Moved to {chosen_location}")
-        print(f"\nNew location: {chosen_location}")
-        print(f"Location description: {self.current_location['visual_description']}")
-        game_state = {"location": self.current_location, "summary": self.event_summary, "player": self.player}
-        narrative = self.narrative_manager.generate_narrative_segment(game_state, "Arrived at new location")
-        print("\n" + narrative)
+
+        # Build game state for narrative generation
+        game_state = {
+            "location": self.current_location,
+            "summary": self.event_summary,
+            "player": self.player
+        }
+
+        # Generate narrative for the new location
+        narrative = self.narrative_manager.generate_narrative_segment(game_state, f"Arrived at {chosen_location}")
         
-        
-        output = {}
+        # Return complete state update
+        output["narrative"] = narrative
         output["current_location"] = {
             "name": self.current_location.get("name"),
-            "visual_description": self.current_location.get("visual_description")
+            "visual_description": self.current_location.get("visual_description"),
+            "connections": self.current_location.get("connections", []),
+            "npcs": self.current_location.get("npcs", [])
         }
-        output["narrative"] = narrative
-        available_npcs = self.current_location.get("npcs", [])
-        output["available_npcs"] = available_npcs
-        default_options = engine.generate_default_choices(f"Move to {chosen_location}")
-        output["default_choices"] = default_options
-        print(json.dumps(output, indent=2))
-        
-        next_choice = self.choice_manager.capture_player_choice(default_options)
-        print(f"\nYou chose: {next_choice}")
-        self.event_summary = self.narrative_manager.update_event_summary(self.event_summary, f"Player chose: {next_choice}")
-        output["player_choice"] = next_choice
+        output["available_npcs"] = self.current_location.get("npcs", [])
+        output["default_choices"] = self.generate_default_choices(f"Moved to {chosen_location}")
         output["event_summary"] = self.event_summary
         
-        
         return output
+
     def process_player_input(self, player_input: str) -> Dict[str, Any]:
         output = {}
-        # Build the game state to pass into the narrative generator.
         game_state = {
             "location": self.current_location,
             "summary": self.event_summary,
             "player": self.player
         }
         
-        # 1. Generate the narrative first
         narrative = self.narrative_manager.generate_narrative_segment(game_state, player_input)
-        print("\nNarrative:")
-        print(narrative)
         
-        # (Optionally, if you want NPCs to respond automatically when NOT doing a talk/move command:)
         npc_responses = []
         followup = ""
         available_npcs = self.current_location.get("npcs", [])
@@ -410,68 +361,23 @@ class GameEngine:
                 for npc in active_npcs:
                     response = self.npc_interaction.generate_npc_response(npc, player_input, self.event_summary)
                     npc_responses.append(response)
-                    print("\nNPC Response:")
-                    print(f"  Name   : {response.get('name')}")
-                    print(f"  Action : {response.get('action')}")
-                    print(f"  Speech : {response.get('speech')}")
                 followup = self.narrative_manager.generate_followup_narrative(npc_responses, self.event_summary)
-                print("\nFollow-up:")
-                print(followup)
                 self.event_summary = self.narrative_manager.update_event_summary(self.event_summary, "Scene updated after NPC interaction.")
-            else:
-                print("\nNo NPC interacts at this moment.")
-        else:
-            # For commands like "talk to" or "move to", any additional actions (e.g. a detailed dialogue or NPC selection)
-            # can be handled afterward (see main loop example below).
-            pass
 
-        # 2. Build default options list (always show choices after the narrative)
-        default_options = ["Explore the area"]
-        
-        # If there are NPCs in the current location, add the talk option.
-        if available_npcs:
-            npc_names = ", ".join(npc.get("name", "Unknown") for npc in available_npcs)
-            default_options.append(f"Talk to someone ({npc_names})")
-        
-        # If there are connected locations, add the move option.
-        connections = self.current_location.get("connections", [])
-        if connections:
-            connected_str = ", ".join(connections)
-            default_options.append(f"Move to a new location ({connected_str})")
-        else:
-            default_options.append("Move to a new location")
-        
-        # Add any dynamic choices from the LLM.
-        dynamic_choices = self.narrative_manager.generate_dynamic_choices(game_state, player_input)
-        for choice in dynamic_choices:
-            if choice not in default_options:
-                default_options.append(choice)
-
-        # 3. Display the choices and capture one user input.
-        
-        
-        # Return the complete cycle output.
         output["narrative"] = narrative
         output["npc_responses"] = npc_responses
         output["available_npcs"] = available_npcs
         output["followup"] = followup
-        #output["active_npcs"] = active_npcs
-        output["default_choices"] = default_options
+        output["default_choices"] = self.generate_default_choices(player_input)
         output["current_location"] = {
             "name": self.current_location.get("name"),
-            "visual_description": self.current_location.get("visual_description")
+            "visual_description": self.current_location.get("visual_description"),
+            "connections": self.current_location.get("connections", []),
+            "npcs": self.current_location.get("npcs", [])
         }
-        self.choice_manager.display_choices(default_options)
-        print(json.dumps(output, indent=2))
-        next_choice = self.choice_manager.capture_player_choice(default_options)
-        print(f"\nYou chose: {next_choice}")
-        self.event_summary = self.narrative_manager.update_event_summary(self.event_summary, f"Player chose: {next_choice}")
-        output["player_choice"] = next_choice
         output["event_summary"] = self.event_summary
-        
-        print(json.dumps(output, indent=2))
         return output
-    
+
     def generate_default_choices(self, player_input: str) -> List[str]:
         """Generate a list of default choices based on the current location and event summary."""
         game_state = {"location": self.current_location,
