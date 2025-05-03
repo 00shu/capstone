@@ -626,74 +626,56 @@ setTimeout(() => keepInView(responseElement), 0);
             const llmStatus = document.getElementById('llm-status');
             llmStatus.style.display = 'block';
             llmStatus.classList.add('processing');
-            
+        
             try {
-                // First, handle the move
+                // Step 1: Call /handle_move to get new location + NPCs
                 const moveResponse = await fetch('/handle_move', {
                     method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json'
-                    },
+                    headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({
                         connections: currentState.current_location.connections,
                         chosen_location: location
                     })
                 });
-                
-                if (!moveResponse.ok) {
-                    throw new Error(`HTTP error! status: ${moveResponse.status}`);
-                }
-                
+        
+                if (!moveResponse.ok) throw new Error(`HTTP error! status: ${moveResponse.status}`);
+        
                 const moveData = await moveResponse.json();
-                console.log('Move response:', moveData);
-                
-                // Force a fresh timestamp for the new location's assets
-                moveData.timestamp = new Date().getTime();
-                
-                // Update the game state with move data first
-                updateGameState(moveData);
-                
-                // Then, trigger narrative generation for the new location
+                moveData.timestamp = new Date().getTime();  // for image refresh
+        
+                // Step 2: Immediately update UI with new location, NPCs
+                updateGameState({
+                    ...moveData,
+                    narrative: "<em>Loading narrative...</em>",
+                    followup: ""
+                });
+        
+                // Step 3: Now call /process_input to get LLM-generated narrative
                 const narrativeResponse = await fetch('/process_input', {
                     method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json'
-                    },
-                    body: JSON.stringify({
-                        input: `Arrived at ${location}`
-                    })
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ input: `Arrived at ${location}` })
                 });
-                
-                if (!narrativeResponse.ok) {
-                    throw new Error(`HTTP error! status: ${narrativeResponse.status}`);
-                }
-                
+        
+                if (!narrativeResponse.ok) throw new Error(`HTTP error! status: ${narrativeResponse.status}`);
+        
                 const narrativeData = await narrativeResponse.json();
-                console.log('Narrative response:', narrativeData);
-                
-                // Update the narrative while preserving the current location, NPCs, and timestamp
+        
+                // Step 4: Merge narrative into current view without losing NPC/location
                 const combinedState = {
                     ...narrativeData,
                     current_location: moveData.current_location,
                     available_npcs: moveData.available_npcs,
                     default_choices: moveData.default_choices,
-                    timestamp: moveData.timestamp // Preserve the timestamp
+                    timestamp: moveData.timestamp
                 };
-                
-                // Force reload of images by clearing them first
-                const backgroundImage = document.getElementById('background-image');
-                backgroundImage.src = '';
-                const npcContainer = document.getElementById('npc-container');
-                npcContainer.innerHTML = '';
-                
-                // Update game state with combined data
+        
                 updateGameState(combinedState);
-                
+        
             } catch (error) {
                 console.error('Error moving to location:', error);
                 alert('Failed to move to the selected location. Please try again.');
             } finally {
-                // Hide location buttons and deselect move button
                 hideLocationButtons();
                 llmStatus.style.display = 'none';
                 llmStatus.classList.remove('processing');
